@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Zone qui se referme</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #000;
+    }
+    #canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // image de fond
+  const mapImg = new Image();
+  mapImg.src = 'image.png'; // doit être dans le même dossier
+
+  // image dimensions (ex: 1000 x 800 px)
+  const imageWidth = 1000;
+  const imageHeight = 800;
+
+  // GPS coins image (calibré pour image.png)
+  const topLeft = { lat: 48.1230, lon: -1.2160 };
+  const bottomRight = { lat: 48.1180, lon: -1.2070 };
+
+  // centre GPS
+  const centerLat = 48.12061231600659;
+  const centerLon = -1.2115913174157131;
+  const centerPixel = gpsToPixel(centerLat, centerLon);
+
+  let circleRadius = 300; // pixels
+  let userPos = null;
+
+  function gpsToPixel(lat, lon) {
+    const xRatio = (lon - topLeft.lon) / (bottomRight.lon - topLeft.lon);
+    const yRatio = (topLeft.lat - lat) / (topLeft.lat - bottomRight.lat);
+    return {
+      x: xRatio * imageWidth,
+      y: yRatio * imageHeight
+    };
+  }
+
+  function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    draw();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const scaleX = canvas.width / imageWidth;
+    const scaleY = canvas.height / imageHeight;
+
+    // dessine l'image de fond
+    ctx.drawImage(mapImg, 0, 0, canvas.width, canvas.height);
+
+    // cercle rouge
+    ctx.beginPath();
+    ctx.arc(centerPixel.x * scaleX, centerPixel.y * scaleY, circleRadius * scaleX, 0, 2 * Math.PI);
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255, 0, 0, 0.1)";
+    ctx.fill();
+
+    // position de l'utilisateur
+    if (userPos) {
+      const px = gpsToPixel(userPos.lat, userPos.lon);
+      ctx.beginPath();
+      ctx.arc(px.x * scaleX, px.y * scaleY, 8, 0, 2 * Math.PI);
+      ctx.fillStyle = "blue";
+      ctx.fill();
+    }
+  }
+
+  function updatePosition() {
+    if (!navigator.geolocation) {
+      console.warn("Géolocalisation non disponible.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(pos => {
+      userPos = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude
+      };
+      console.log("Position GPS :", userPos);
+      draw();
+    }, err => {
+      console.warn("Erreur GPS :", err.message);
+    });
+  }
+
+  // Rétrécir la zone toutes les 5 minutes
+  setInterval(() => {
+    circleRadius *= 0.8;
+    draw();
+  }, 5 * 60 * 1000);
+
+  // Mise à jour GPS toutes les 10 sec
+  setInterval(updatePosition, 10000);
+
+  // Initialisation
+  window.addEventListener('resize', resizeCanvas);
+  mapImg.onload = () => {
+    resizeCanvas();
+    updatePosition();
+  };
+</script>
+</body>
+</html>
