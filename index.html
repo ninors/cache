@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carte avec cercles</title>
+  <title>Carte avec cercles rétrécissants</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <style>
     html, body, #map {
@@ -11,9 +11,6 @@
       margin: 0;
     }
     /* Overlay rouge sur la carte */
-    #map {
-      position: relative;
-    }
     #overlay {
       position: absolute;
       top: 0;
@@ -32,7 +29,7 @@
 
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
-// Enregistrement du Service Worker pour mise en cache
+// Vérifier la prise en charge du Service Worker et l'enregistrer
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js')
     .then(() => console.log("Service Worker enregistré"))
@@ -41,10 +38,10 @@ if ('serviceWorker' in navigator) {
 
 const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
 
-// Utiliser OpenStreetMap comme fond de carte
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19,
-  attribution: '© OpenStreetMap'
+// Utiliser CartoDB Positron pour un fond de carte aquarelle
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap, © CartoDB',
+  maxZoom: 19
 }).addTo(map);
 
 // Cercle initial
