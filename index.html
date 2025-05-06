@@ -10,83 +10,99 @@
       height: 100%;
       margin: 0;
     }
+    /* Overlay rouge sur la carte */
+    #map {
+      position: relative;
+    }
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 0, 0, 0.2); /* Légère teinte rouge */
+      pointer-events: none; /* Empêche d'interférer avec l'interaction de la carte */
+    }
   </style>
 </head>
 <body>
+
 <div id="map"></div>
+<div id="overlay"></div> <!-- L'overlay rouge sur la carte -->
 
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
-  // Enregistrement du Service Worker pour mise en cache
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log("Service Worker enregistré"))
-      .catch(err => console.error("Erreur Service Worker", err));
-  }
+// Enregistrement du Service Worker pour mise en cache
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("Service Worker enregistré"))
+    .catch(err => console.error("Erreur Service Worker", err));
+}
 
-  const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
+const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
 
-  // Utiliser OpenStreetMap comme fond de carte
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
+// Utiliser OpenStreetMap comme fond de carte
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: '© OpenStreetMap'
+}).addTo(map);
 
-  // Cercle initial
-  let radius = 200; // en mètres
-  let circle = L.circle([48.12061231600659, -1.2115913174157131], {
-    color: 'red',
-    fillColor: '#f03',
-    fillOpacity: 0.2,
-    radius: radius
-  }).addTo(map);
+// Cercle initial
+let radius = 200; // en mètres
+let circle = L.circle([48.12061231600659, -1.2115913174157131], {
+  color: 'blue',
+  fillColor: 'blue',
+  fillOpacity: 0.2,
+  radius: radius
+}).addTo(map);
 
-  // Fonction de mise à jour du cercle toutes les 5 minutes
-  setInterval(() => {
-    radius *= 0.8;
-    circle.setRadius(radius);
-  }, 5 * 60 * 1000);
+// Fonction de mise à jour du cercle toutes les 5 secondes
+setInterval(() => {
+  radius *= 0.8; // Réduit la taille du cercle de 20% toutes les 5 secondes
+  circle.setRadius(radius);
+}, 5000);
 
-  // Afficher la position de l'utilisateur
-  let userMarker = null;
+// Afficher la position de l'utilisateur
+let userMarker = null;
 
-  function updatePosition() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const latLng = [pos.coords.latitude, pos.coords.longitude];
-          console.log(`Position obtenue : ${latLng}`);
-          
-          if (!userMarker) {
-            userMarker = L.circleMarker(latLng, {
-              radius: 8,
-              color: 'blue',
-              fillColor: 'blue',
-              fillOpacity: 1
-            }).addTo(map);
-          } else {
-            userMarker.setLatLng(latLng);
-          }
-          map.setView(latLng, 17);  // Centrer la carte sur la position
-        },
-        (err) => {
-          console.warn("Erreur GPS :", err.message);
-          alert("Impossible d'obtenir la position. Veuillez vérifier les paramètres de géolocalisation.");
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 5000,  // Délai d'attente pour obtenir la position
-          maximumAge: 0  // Pas de mise en cache de la position
+function updatePosition() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const latLng = [pos.coords.latitude, pos.coords.longitude];
+        console.log(`Position obtenue : ${latLng}`);
+        
+        if (!userMarker) {
+          userMarker = L.circleMarker(latLng, {
+            radius: 8,
+            color: 'blue',
+            fillColor: 'blue',
+            fillOpacity: 1
+          }).addTo(map);
+        } else {
+          userMarker.setLatLng(latLng);
         }
-      );
-    } else {
-      alert("La géolocalisation n'est pas supportée par ce navigateur.");
-    }
+        map.setView(latLng, 17);  // Centrer la carte sur la position
+      },
+      (err) => {
+        console.warn("Erreur GPS :", err.message);
+        alert("Impossible d'obtenir la position. Veuillez vérifier les paramètres de géolocalisation.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,  // Délai d'attente pour obtenir la position
+        maximumAge: 0  // Pas de mise en cache de la position
+      }
+    );
+  } else {
+    alert("La géolocalisation n'est pas supportée par ce navigateur.");
   }
+}
 
-  // Initialiser la mise à jour de la position et répéter toutes les 10 secondes
-  updatePosition();
-  setInterval(updatePosition, 10000);
+// Initialiser la mise à jour de la position et répéter toutes les 10 secondes
+updatePosition();
+setInterval(updatePosition, 10000);
 </script>
+
 </body>
 </html>
