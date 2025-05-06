@@ -4,12 +4,7 @@ const ASSETS = [
   '/index.html',
   '/leaflet/leaflet.css',
   '/leaflet/leaflet.js',
-  // Ajouter les tuiles nécessaires à précharger :
-  '/tiles/17/66022/43721.png',
-  '/tiles/17/66022/43722.png',
-  '/tiles/17/66023/43721.png',
-  '/tiles/17/66023/43722.png',
-  // Ajoute ici les tuiles nécessaires autour du point central
+  // Autres fichiers nécessaires, comme ceux que vous pourriez vouloir mettre en cache
 ];
 
 self.addEventListener('install', event => {
