@@ -1,78 +1,36 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sélection de Session</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 50px;
-    }
-    .session {
-      display: inline-block;
-      background-color: #4CAF50;
-      padding: 15px;
-      margin: 10px;
-      cursor: pointer;
-      color: white;
-      border-radius: 5px;
-    }
-    .session:hover {
-      background-color: #45a049;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lancer la Partie</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 100px;
+        }
+        button {
+            padding: 20px;
+            font-size: 20px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+    </style>
 </head>
 <body>
+    <h1>Bienvenue dans le jeu</h1>
+    <p>Cliquez sur le bouton pour commencer la partie !</p>
+    <button onclick="startGame()">Lancer la Partie</button>
 
-<h1>Sélectionner une Session</h1>
-<p>Choisissez une session pour commencer :</p>
-
-<div id="sessions"></div>
-
-<script>
-  // Fonction pour générer l'heure de la prochaine session
-  function getNextSessionTime() {
-    const now = new Date();
-    const minutes = now.getMinutes();
-    const nextMinutes = Math.ceil(minutes / 5) * 5; // Arrondi au multiple de 5 supérieur
-    now.setMinutes(nextMinutes);
-    now.setSeconds(0);
-    now.setMilliseconds(0);
-    return now;
-  }
-
-  // Fonction pour afficher les sessions disponibles
-  function displaySessions() {
-    const sessionContainer = document.getElementById('sessions');
-    sessionContainer.innerHTML = ''; // Réinitialise les sessions
-
-    for (let i = 0; i < 12; i++) {
-      const sessionTime = getNextSessionTime();
-      const sessionDiv = document.createElement('div');
-      sessionDiv.className = 'session';
-      sessionDiv.innerText = `Session de ${sessionTime.getHours()}h${sessionTime.getMinutes()}`;
-      sessionDiv.addEventListener('click', () => startSession(sessionTime));
-      sessionContainer.appendChild(sessionDiv);
-    }
-  }
-
-  // Démarrer la session
-  function startSession(sessionTime) {
-    const now = new Date();
-    const timeUntilStart = sessionTime - now;
-
-    // Enregistrer la session dans le localStorage pour utilisation dans index.html
-    localStorage.setItem('sessionStartTime', sessionTime);
-
-    // Rediriger vers index.html
-    window.location.href = 'index.html';
-  }
-
-  // Afficher les sessions disponibles
-  displaySessions();
-</script>
-
+    <script>
+        function startGame() {
+            // Rediriger vers index.html
+            window.location.href = "index.html"; // Vous pouvez y ajouter des paramètres d'URL si nécessaire
+        }
+    </script>
 </body>
 </html>
