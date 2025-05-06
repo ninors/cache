@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion des Sessions</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #map {
+      height: 50%; /* La carte prend la moitié de l'écran */
+    }
+    .session-container {
+      height: 50%;
+      overflow-y: auto;
+      background-color: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+    }
+    .session {
+      padding: 10px;
+      margin: 5px;
+      background-color: #f0f0f0;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    #overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 0, 0, 0.5);
+      display: none;
+      z-index: 100;
+      text-align: center;
+      color: white;
+      font-size: 30px;
+      line-height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+<div id="overlay">Attente...</div>
+
+<div class="session-container" id="sessions"></div>
+
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+// Initialisation de la carte
+const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
+
+// Fond de carte aquarelle
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap, © CartoDB',
+  maxZoom: 19
+}).addTo(map);
+
+let userMarker = null;
+let circle = null;
+let radius = 200; // en mètres
+let outsideCircle = false;
+let waitingForSession = false;
+
+// Fonction pour générer l'heure de la prochaine session
+function getNextSessionTime() {
+  const now = new Date();
+  const minutes = now.getMinutes();
+  const nextMinutes = Math.ceil(minutes / 5) * 5; // Arrondi au multiple de 5 supérieur
+  now.setMinutes(nextMinutes);
+  now.setSeconds(0);
+  now.setMilliseconds(0);
+  return now;
+}
+
+// Affichage de la session en bas de la page
+function displaySessions() {
+  const sessionContainer = document.getElementById('sessions');
+  sessionContainer.innerHTML = ''; // Réinitialise les sessions
+
+  for (let i = 0; i < 12; i++) {
+    const sessionTime = getNextSessionTime();
+    const sessionDiv = document.createElement('div');
+    sessionDiv.className = 'session';
+    sessionDiv.innerText = `Session de ${sessionTime.getHours()}h${sessionTime.getMinutes()}`;
+    sessionDiv.addEventListener('click', () => startSession(sessionTime));
+    sessionContainer.appendChild(sessionDiv);
+  }
+}
+
+// Démarrer la session
+function startSession(sessionTime) {
+  waitingForSession = false;
+  document.getElementById('overlay').style.display = 'none';
+  alert(`Démarrage de la session de ${sessionTime.getHours()}h${sessionTime.getMinutes()}`);
+  updatePosition();
+}
+
+// Demander la géolocalisation de l'utilisateur
+function getGeolocation() {
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const latLng = [position.coords.latitude, position.coords.longitude];
+        if (!userMarker) {
+          userMarker = L.circleMarker(latLng, {
+            radius: 8,
+            color: 'blue',
+            fillColor: 'blue',
+            fillOpacity: 1
+          }).addTo(map);
+        } else {
+          userMarker.setLatLng(latLng);
+        }
+        map.setView(latLng, 17);
+        checkPosition(latLng);
+      },
+      (err) => {
+        console.warn("Erreur GPS :", err.message);
+        alert("Impossible d'obtenir la position. Veuillez vérifier les paramètres de géolocalisation.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+  } else {
+    alert("La géolocalisation n'est pas supportée par ce navigateur.");
+  }
+}
+
+// Vérifier la position de l'utilisateur par rapport au cercle
+function checkPosition(latLng) {
+  if (!circle) {
+    circle = L.circle([48.12061231600659, -1.2115913174157131], {
+      color: 'blue',
+      fillColor: 'blue',
+      fillOpacity: 0.2,
+      radius: radius
+    }).addTo(map);
+  }
+
+  const distance = map.distance(latLng, circle.getLatLng());
+  if (distance > radius) {
+    if (!outsideCircle) {
+      outsideCircle = true;
+      document.body.style.backgroundColor = 'red'; // Clignotement ou fond rouge
+      setTimeout(() => {
+        document.body.style.backgroundColor = ''; // Réinitialise après un délai
+      }, 2000);
+    }
+  } else {
+    outsideCircle = false;
+  }
+}
+
+// Vérifier l'heure toutes les 2 secondes
+setInterval(() => {
+  const now = new Date();
+  const sessionTime = getNextSessionTime();
+  if (waitingForSession && now >= sessionTime) {
+    waitingForSession = false;
+    document.getElementById('overlay').style.display = 'none';
+    startSession(sessionTime);
+  }
+}, 2000);
+
+// Initialisation
+displaySessions();
+getGeolocation();
+</script>
+</body>
+</html>
