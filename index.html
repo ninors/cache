@@ -3,154 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Escape Game - Carte et Géolocalisation</title>
+    <title>Carte Leaflet avec mise à jour de position</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-thunderforest/leaflet-thunderforest.js"></script>
     <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-        }
         #map {
-            height: 50vh;
+            height: 100vh;
             width: 100%;
-        }
-        .session-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            text-align: center;
-        }
-        .waiting-message {
-            display: none;
-            font-size: 18px;
-            margin-top: 10px;
-        }
-        #smsButton {
-            position: fixed;
-            bottom: 70px;
-            left: 20px;
-            background-color: #ff4d4d;
-            padding: 10px;
-            font-size: 16px;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="session-container">
-        <h3>Session en cours :</h3>
-        <p id="sessionTime">Calcul de l'heure...</p>
-        <div class="waiting-message" id="waitingMessage">Attente de la session...</div>
-    </div>
-    <button id="smsButton">Envoyer un SMS</button>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        let map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 13); // Position initiale
+<div id="map"></div>
 
-        // TileLayer pour un style aquarelle/escape game
-        L.tileLayer('https://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://stamen.com">Stamen Design</a>, <a href="https://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>'
-        }).addTo(map);
+<script>
+    // Initialisation de la carte, centrée sur Vitré (Ille-et-Vilaine, Bretagne)
+    var map = L.map('map').setView([48.1167, -1.2192], 13); // Coordonnées de Vitré
 
-        let userMarker;
-        let circle;
-        let interval;
-        let startTime;
+    // Ajout des tuiles Thunderforest.Pioneer
+    L.tileLayer('https://{s}.tile.thunderforest.com/pioneer/{z}/{x}/{y}.png?apikey=YOUR_API_KEY', {
+        attribution: '&copy; <a href="https://www.thunderforest.com/">Thunderforest</a> contributors'
+    }).addTo(map);
 
-        // Fonction pour obtenir la position de l'utilisateur
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
-            } else {
-                alert("La géolocalisation n'est pas supportée par ce navigateur.");
-            }
+    // Position actuelle de l'utilisateur (mise à jour chaque seconde)
+    var userMarker = L.marker([48.1167, -1.2192]).addTo(map); // Position initiale à Vitré
+    var userCircle = L.circle([48.1167, -1.2192], {
+        color: 'blue',
+        fillColor: '#30f',
+        fillOpacity: 0.5,
+        radius: 200
+    }).addTo(map);
+
+    // Fonction pour obtenir la position actuelle de l'utilisateur
+    function updateUserPosition() {
+        navigator.geolocation.getCurrentPosition(function(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            
+            // Mise à jour du marqueur et du cercle
+            userMarker.setLatLng([lat, lon]);
+            userCircle.setLatLng([lat, lon]);
+        });
+    }
+
+    // Mise à jour de la position toutes les secondes
+    setInterval(updateUserPosition, 1000);
+
+    // Cercle qui se rétrécit toutes les 5 secondes
+    var circleRadius = 200;
+    setInterval(function() {
+        if (circleRadius > 50) {
+            circleRadius -= 10;  // Réduction du rayon
+            userCircle.setRadius(circleRadius);
         }
+    }, 5000);
+</script>
 
-        // Afficher la position de l'utilisateur
-        function showPosition(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-
-            userMarker = L.marker([lat, lon]).addTo(map);
-            userMarker.bindPopup("Vous êtes ici").openPopup();
-            map.setView([lat, lon], 13);
-
-            // Créer un cercle rétrécissant toutes les 5 secondes
-            circle = L.circle([lat, lon], {
-                color: 'red',
-                fillColor: '#f03',
-                fillOpacity: 0.2,
-                radius: 5000
-            }).addTo(map);
-
-            // Mettre à jour la taille du cercle toutes les 5 secondes
-            startTime = Date.now();
-            interval = setInterval(shrinkCircle, 5000);
-        }
-
-        // Fonction pour rétrécir le cercle
-        function shrinkCircle() {
-            const elapsedTime = (Date.now() - startTime) / 1000; // Temps écoulé en secondes
-            const newRadius = 5000 - Math.floor(elapsedTime * 100); // Le cercle rétrécit de 100 mètres chaque 5 secondes
-            circle.setRadius(newRadius);
-
-            // Vérifier si l'utilisateur est dans la zone
-            const userLat = userMarker.getLatLng().lat;
-            const userLon = userMarker.getLatLng().lng;
-            const distance = map.distance([userLat, userLon], circle.getLatLng());
-
-            if (distance > newRadius) {
-                // Si hors de la zone, afficher un message et faire clignoter l'écran en rouge
-                document.body.style.backgroundColor = "red";
-                setTimeout(() => document.body.style.backgroundColor = "white", 500);
-            }
-        }
-
-        // Fonction d'erreur si la géolocalisation échoue
-        function showError(error) {
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    alert("L'utilisateur a refusé la demande de géolocalisation.");
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    alert("La position est indisponible.");
-                    break;
-                case error.TIMEOUT:
-                    alert("Le délai de la demande de géolocalisation a expiré.");
-                    break;
-                case error.UNKNOWN_ERROR:
-                    alert("Une erreur inconnue est survenue.");
-                    break;
-            }
-        }
-
-        // Demander la géolocalisation au chargement de la page
-        getLocation();
-
-        // Calculer et afficher l'heure de la session
-        function updateSessionTime() {
-            const now = new Date();
-            let minutes = now.getMinutes();
-            minutes = Math.ceil(minutes / 5) * 5; // Arrondir à la prochaine session de 5 minutes
-            let sessionTime = new Date(now.setMinutes(minutes, 0, 0));
-            document.getElementById("sessionTime").innerText = `Session à ${sessionTime.getHours()}h${sessionTime.getMinutes() < 10 ? '0' : ''}${sessionTime.getMinutes()}`;
-
-            // Afficher l'attente jusqu'à la session
-            setTimeout(function() {
-                document.getElementById('waitingMessage').style.display = 'block';
-            }, (sessionTime - now) - 5000); // Attente 5 secondes avant la session
-        }
-
-        // Appel de la fonction pour mettre à jour l'heure de la session toutes les 2 secondes
-        setInterval(updateSessionTime, 2000);
-    </script>
 </body>
 </html>
