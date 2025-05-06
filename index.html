@@ -20,11 +20,19 @@
         body {
             font-family: Arial, sans-serif;
         }
-        #map {
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             height: 100vh;
+        }
+        #map {
+            height: 75%; /* 3/4 de l'écran */
             width: 100%;
             border-radius: 20px;
-            margin: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
         .fin-partie {
             position: absolute;
@@ -38,10 +46,31 @@
             display: none;
             z-index: 1000;
         }
+        .points-container {
+            margin-top: 20px;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        .action-button {
+            padding: 15px 30px;
+            background-color: #2196f3;
+            color: white;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .action-button:disabled {
+            background-color: #d3d3d3;
+            cursor: not-allowed;
+        }
         .map-container {
             border-radius: 20px;
             overflow: hidden;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
         .clignoter {
             animation: clignoter 0.5s infinite alternate;
@@ -69,10 +98,20 @@
 </head>
 <body>
 
-<div class="fin-partie" id="finPartie">FIN DE LA PARTIE</div>
+<div class="container">
+    <div class="fin-partie" id="finPartie">FIN DE LA PARTIE</div>
 
-<div class="map-container">
-    <div id="map"></div>
+    <div class="map-container">
+        <div id="map"></div>
+    </div>
+
+    <div class="points-container">
+        Points: <span id="points">0</span>
+    </div>
+
+    <div class="button-container">
+        <button id="actionButton" class="action-button" onclick="handleAction()">Cliquez-moi</button>
+    </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -133,17 +172,43 @@
             }, 3000); // Clignote pendant 3 secondes
         }
     }, 5000);
-</script>
 
-<!-- Service Worker (cache management) -->
-<script>
-    // Service Worker pour gérer le cache (dans un fichier séparé service-worker.js)
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
-            console.log('Service Worker enregistré avec succès :', registration);
-        }).catch(function(error) {
-            console.log('Échec de l\'enregistrement du Service Worker :', error);
-        });
+    // Points du joueur
+    var points = 0;
+    var pointsDisplay = document.getElementById('points');
+    setInterval(function() {
+        points += 1;
+        pointsDisplay.textContent = points;
+    }, 10000); // Gagne 1 point toutes les 10 secondes
+
+    // Bouton d'action
+    var actionButton = document.getElementById('actionButton');
+    var lastClicked = 0;
+
+    function handleAction() {
+        var currentTime = new Date().getTime();
+        if (currentTime - lastClicked >= 20000) {
+            lastClicked = currentTime;
+            // Désactiver le bouton pendant 20 secondes
+            actionButton.disabled = true;
+            setTimeout(function() {
+                actionButton.disabled = false;
+            }, 20000);
+
+            // Tirage au sort des points ou lecture d'un audio
+            var action = Math.random();
+            if (action < 0.5) {
+                // Lire un audio
+                var audio = new Audio('audio/son.mp3'); // Assurez-vous que l'audio est déjà chargé
+                audio.play();
+            } else {
+                // Ajouter des points aléatoires
+                var randomPoints = [30, 20, 10, 5, 80, 100, 90];
+                var pointsGagnes = randomPoints[Math.floor(Math.random() * randomPoints.length)];
+                points += pointsGagnes;
+                pointsDisplay.textContent = points;
+            }
+        }
     }
 </script>
 
