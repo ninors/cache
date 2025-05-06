@@ -3,32 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carte Leaflet avec mise à jour de position</title>
+    <title>Carte Leaflet Fortnite - Mode Hors Ligne</title>
+
+    <!-- Google Font Icons (Fortnite-like icon) -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet-thunderforest/leaflet-thunderforest.js"></script>
+
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+        }
         #map {
             height: 100vh;
             width: 100%;
+            border-radius: 20px;
+            margin: 20px;
+        }
+        .fin-partie {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: red;
+            font-weight: bold;
+            text-shadow: 2px 2px 10px rgba(255, 0, 0, 0.5);
+            display: none;
+            z-index: 1000;
+        }
+        .map-container {
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+        .clignoter {
+            animation: clignoter 0.5s infinite alternate;
+        }
+        @keyframes clignoter {
+            0% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+            }
         }
     </style>
+
+    <!-- Service Worker (cache management) -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+                console.log('Service Worker enregistré avec succès :', registration);
+            }).catch(function(error) {
+                console.log('Échec de l\'enregistrement du Service Worker :', error);
+            });
+        }
+    </script>
 </head>
 <body>
 
-<div id="map"></div>
+<div class="fin-partie" id="finPartie">FIN DE LA PARTIE</div>
 
+<div class="map-container">
+    <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-    // Initialisation de la carte, centrée sur Vitré (Ille-et-Vilaine, Bretagne)
-    var map = L.map('map').setView([48.1167, -1.2192], 13); // Coordonnées de Vitré
+    // Initialisation de la carte
+    var map = L.map('map', { zoomControl: false }).setView([48.1167, -1.2192], 13); // Coordonnées de Vitré
 
-    // Ajout des tuiles Thunderforest.Pioneer
-    L.tileLayer('https://{s}.tile.thunderforest.com/pioneer/{z}/{x}/{y}.png?apikey=YOUR_API_KEY', {
-        attribution: '&copy; <a href="https://www.thunderforest.com/">Thunderforest</a> contributors'
+    // Ajout des tuiles Leaflet (pour mode hors ligne, vous pouvez utiliser des tuiles locales)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
     }).addTo(map);
 
-    // Position actuelle de l'utilisateur (mise à jour chaque seconde)
-    var userMarker = L.marker([48.1167, -1.2192]).addTo(map); // Position initiale à Vitré
+    // Icône personnalisée pour la position (style Fortnite)
+    var userIcon = L.icon({
+        iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/material-design-icons/3.0.1/svg/maps/place.svg', // Icône de position
+        iconSize: [30, 30], // Taille de l'icône
+        iconAnchor: [15, 30], // Ancrage de l'icône
+        popupAnchor: [0, -30] // Position du popup
+    });
+
+    // Position actuelle de l'utilisateur (initiale à Vitré)
+    var userMarker = L.marker([48.1167, -1.2192], { icon: userIcon }).addTo(map);
     var userCircle = L.circle([48.1167, -1.2192], {
         color: 'blue',
         fillColor: '#30f',
@@ -53,12 +119,32 @@
 
     // Cercle qui se rétrécit toutes les 5 secondes
     var circleRadius = 200;
+    var finPartie = document.getElementById('finPartie');
     setInterval(function() {
-        if (circleRadius > 50) {
+        if (circleRadius > 0) {
             circleRadius -= 10;  // Réduction du rayon
             userCircle.setRadius(circleRadius);
+        } else {
+            // Afficher "FIN DE LA PARTIE" et clignoter l'écran
+            finPartie.style.display = 'block';
+            finPartie.classList.add('clignoter');
+            setTimeout(function() {
+                finPartie.classList.remove('clignoter');
+            }, 3000); // Clignote pendant 3 secondes
         }
     }, 5000);
+</script>
+
+<!-- Service Worker (cache management) -->
+<script>
+    // Service Worker pour gérer le cache (dans un fichier séparé service-worker.js)
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js').then(function(registration) {
+            console.log('Service Worker enregistré avec succès :', registration);
+        }).catch(function(error) {
+            console.log('Échec de l\'enregistrement du Service Worker :', error);
+        });
+    }
 </script>
 
 </body>
