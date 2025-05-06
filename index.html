@@ -2,8 +2,8 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Zone dynamique</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carte avec cercles</title>
   <link rel="stylesheet" href="leaflet/leaflet.css">
   <style>
     html, body, #map {
@@ -17,58 +17,57 @@
 
 <script src="leaflet/leaflet.js"></script>
 <script>
-  // Enregistre le Service Worker
+  // Enregistrement du Service Worker pour mise en cache
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
-      .then(() => console.log("SW enregistré"))
-      .catch(err => console.error("Erreur SW", err));
+      .then(() => console.log("Service Worker enregistré"))
+      .catch(err => console.error("Erreur Service Worker", err));
   }
 
-  const center = [48.12061231600659, -1.2115913174157131];
-  const map = L.map('map').setView(center, 17);
+  const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
 
-  // Utiliser des tuiles locales (dans /tiles/z/x/y.png)
-  L.tileLayer('tiles/{z}/{x}/{y}.png', {
+  // Utiliser OpenStreetMap comme fond de carte
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    minZoom: 15,
-    attribution: 'Carte locale'
+    attribution: '© OpenStreetMap'
   }).addTo(map);
 
   // Cercle initial
   let radius = 200; // en mètres
-  let cercle = L.circle(center, {
+  let circle = L.circle([48.12061231600659, -1.2115913174157131], {
     color: 'red',
     fillColor: '#f03',
     fillOpacity: 0.2,
     radius: radius
   }).addTo(map);
 
-  // Réduction du cercle toutes les 5 min
+  // Fonction de mise à jour du cercle toutes les 5 minutes
   setInterval(() => {
     radius *= 0.8;
-    cercle.setRadius(radius);
+    circle.setRadius(radius);
   }, 5 * 60 * 1000);
 
-  // Position de l'utilisateur
+  // Afficher la position de l'utilisateur
   let userMarker = null;
   function updatePosition() {
     navigator.geolocation.getCurrentPosition(pos => {
-      const latlng = [pos.coords.latitude, pos.coords.longitude];
+      const latLng = [pos.coords.latitude, pos.coords.longitude];
       if (!userMarker) {
-        userMarker = L.circleMarker(latlng, {
+        userMarker = L.circleMarker(latLng, {
           radius: 8,
           color: 'blue',
           fillColor: 'blue',
           fillOpacity: 1
         }).addTo(map);
       } else {
-        userMarker.setLatLng(latlng);
+        userMarker.setLatLng(latLng);
       }
     }, err => {
       console.warn("Erreur GPS :", err.message);
     });
   }
 
+  // Initialiser la mise à jour de la position et répéter toutes les 10 secondes
   updatePosition();
   setInterval(updatePosition, 10000);
 </script>
