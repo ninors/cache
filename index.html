@@ -1,165 +1,87 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Suivi de la Session</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-  <style>
-    html, body {
-      height: 100%;
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    #map {
-      height: 50%; /* La carte prend la moitié de l'écran */
-    }
-    #overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(255, 0, 0, 0.5);
-      display: none;
-      z-index: 100;
-      text-align: center;
-      color: white;
-      font-size: 30px;
-      line-height: 100%;
-    }
-    #attente {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('attente.png') no-repeat center center;
-      background-size: cover;
-      z-index: 999;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carte et Géolocalisation</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        body { margin: 0; }
+        #map { height: 50vh; width: 100%; }
+        #smsButton {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background-color: #ff4d4d;
+            padding: 10px;
+            font-size: 16px;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
+    <div id="map"></div>
+    <button id="smsButton">Envoyer un SMS</button>
 
-<div id="attente"></div>
-<div id="map"></div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        let map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 13); // Position initiale
 
-<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-<script>
-// Initialisation de la carte
-const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
 
-// Fond de carte aquarelle
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
-  attribution: '© OpenStreetMap, © CartoDB',
-  maxZoom: 19
-}).addTo(map);
-
-let userMarker = null;
-let circle = null;
-let radius = 200; // en mètres
-let outsideCircle = false;
-let sessionStartTime = null;
-
-// Fonction pour récupérer la session depuis le localStorage
-function getSessionStartTime() {
-  const sessionTime = localStorage.getItem('sessionStartTime');
-  if (sessionTime) {
-    return new Date(sessionTime);
-  }
-  return null;
-}
-
-// Affichage du cercle rétrécissant
-function startTracking() {
-  const sessionStartTime = getSessionStartTime();
-  if (sessionStartTime) {
-    const now = new Date();
-    const timeUntilStart = sessionStartTime - now;
-
-    // Afficher l'écran d'attente jusqu'à ce que la session commence
-    document.getElementById('attente').style.display = 'block';
-
-    setTimeout(() => {
-      document.getElementById('attente').style.display = 'none'; // Cacher l'attente
-      trackPosition(); // Commencer à suivre la position
-    }, timeUntilStart);
-  }
-}
-
-// Suivi de la position de l'utilisateur
-function trackPosition() {
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latLng = [position.coords.latitude, position.coords.longitude];
-        if (!userMarker) {
-          userMarker = L.circleMarker(latLng, {
-            radius: 8,
-            color: 'blue',
-            fillColor: 'blue',
-            fillOpacity: 1
-          }).addTo(map);
-        } else {
-          userMarker.setLatLng(latLng);
+        // Fonction pour obtenir la position de l'utilisateur
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                alert("La géolocalisation n'est pas supportée par ce navigateur.");
+            }
         }
-        map.setView(latLng, 17);
-        checkPosition(latLng);
-      },
-      (err) => {
-        console.warn("Erreur GPS :", err.message);
-        alert("Impossible d'obtenir la position. Veuillez vérifier les paramètres de géolocalisation.");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
-      }
-    );
-  } else {
-    alert("La géolocalisation n'est pas supportée par ce navigateur.");
-  }
 
-  // Vérifier la position toutes les 2 secondes
-  setInterval(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const latLng = [position.coords.latitude, position.coords.longitude];
-        checkPosition(latLng);
-      });
-    }
-  }, 2000);
-}
+        // Afficher la position de l'utilisateur
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
 
-// Vérifier si l'utilisateur est à l'intérieur ou en dehors du cercle
-function checkPosition(latLng) {
-  if (!circle) {
-    circle = L.circle([48.12061231600659, -1.2115913174157131], {
-      color: 'blue',
-      fillColor: 'blue',
-      fillOpacity: 0.2,
-      radius: radius
-    }).addTo(map);
-  }
+            let userMarker = L.marker([lat, lon]).addTo(map);
+            userMarker.bindPopup("Vous êtes ici").openPopup();
 
-  const distance = map.distance(latLng, circle.getLatLng());
-  if (distance > radius) {
-    if (!outsideCircle) {
-      outsideCircle = true;
-      document.body.style.backgroundColor = 'red'; // Clignotement ou fond rouge
-      setTimeout(() => {
-        document.body.style.backgroundColor = ''; // Réinitialise après un délai
-      }, 2000);
-    }
-  } else {
-    outsideCircle = false;
-  }
-}
+            // Centrer la carte sur la position de l'utilisateur
+            map.setView([lat, lon], 13);
+            
+            // Préparer le message SMS à envoyer
+            let userPhoneNumber = `Votre numéro est : ${lat}, ${lon}`;
+            document.getElementById('smsButton').addEventListener('click', function() {
+                // Créer un lien tel: avec le message pré-rempli
+                const phoneLink = `tel:+33749903958?body=${encodeURIComponent("BON MATCH. " + userPhoneNumber)}`;
+                window.location.href = phoneLink;  // Ouvre l'application SMS avec un message pré-rempli
+            });
+        }
 
-// Initialisation
-startTracking();
-</script>
+        // En cas d'erreur lors de la récupération de la position
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("L'utilisateur a refusé la demande de géolocalisation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("La position est indisponible.");
+                    break;
+                case error.TIMEOUT:
+                    alert("Le délai de la demande de géolocalisation a expiré.");
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("Une erreur inconnue est survenue.");
+                    break;
+            }
+        }
+
+        // Demander la géolocalisation au chargement de la page
+        getLocation();
+    </script>
 </body>
 </html>
