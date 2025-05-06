@@ -3,72 +3,98 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Carte avec cercles rétrécissants</title>
+  <title>Suivi de la Session</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
   <style>
-    html, body, #map {
+    html, body {
       height: 100%;
       margin: 0;
+      font-family: Arial, sans-serif;
     }
-    /* Overlay rouge sur la carte */
+    #map {
+      height: 50%; /* La carte prend la moitié de l'écran */
+    }
     #overlay {
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(255, 0, 0, 0.2); /* Légère teinte rouge */
-      pointer-events: none; /* Empêche d'interférer avec l'interaction de la carte */
+      background-color: rgba(255, 0, 0, 0.5);
+      display: none;
+      z-index: 100;
+      text-align: center;
+      color: white;
+      font-size: 30px;
+      line-height: 100%;
+    }
+    #attente {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('attente.png') no-repeat center center;
+      background-size: cover;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
 
+<div id="attente"></div>
 <div id="map"></div>
-<div id="overlay"></div> <!-- L'overlay rouge sur la carte -->
 
 <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 <script>
-// Vérifier la prise en charge du Service Worker et l'enregistrer
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js')
-    .then(() => console.log("Service Worker enregistré"))
-    .catch(err => console.error("Erreur Service Worker", err));
-}
-
+// Initialisation de la carte
 const map = L.map('map').setView([48.12061231600659, -1.2115913174157131], 17);
 
-// Utiliser CartoDB Positron pour un fond de carte aquarelle
+// Fond de carte aquarelle
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap, © CartoDB',
   maxZoom: 19
 }).addTo(map);
 
-// Cercle initial
-let radius = 200; // en mètres
-let circle = L.circle([48.12061231600659, -1.2115913174157131], {
-  color: 'blue',
-  fillColor: 'blue',
-  fillOpacity: 0.2,
-  radius: radius
-}).addTo(map);
-
-// Fonction de mise à jour du cercle toutes les 5 secondes
-setInterval(() => {
-  radius *= 0.8; // Réduit la taille du cercle de 20% toutes les 5 secondes
-  circle.setRadius(radius);
-}, 5000);
-
-// Afficher la position de l'utilisateur
 let userMarker = null;
+let circle = null;
+let radius = 200; // en mètres
+let outsideCircle = false;
+let sessionStartTime = null;
 
-function updatePosition() {
+// Fonction pour récupérer la session depuis le localStorage
+function getSessionStartTime() {
+  const sessionTime = localStorage.getItem('sessionStartTime');
+  if (sessionTime) {
+    return new Date(sessionTime);
+  }
+  return null;
+}
+
+// Affichage du cercle rétrécissant
+function startTracking() {
+  const sessionStartTime = getSessionStartTime();
+  if (sessionStartTime) {
+    const now = new Date();
+    const timeUntilStart = sessionStartTime - now;
+
+    // Afficher l'écran d'attente jusqu'à ce que la session commence
+    document.getElementById('attente').style.display = 'block';
+
+    setTimeout(() => {
+      document.getElementById('attente').style.display = 'none'; // Cacher l'attente
+      trackPosition(); // Commencer à suivre la position
+    }, timeUntilStart);
+  }
+}
+
+// Suivi de la position de l'utilisateur
+function trackPosition() {
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const latLng = [pos.coords.latitude, pos.coords.longitude];
-        console.log(`Position obtenue : ${latLng}`);
-        
+      (position) => {
+        const latLng = [position.coords.latitude, position.coords.longitude];
         if (!userMarker) {
           userMarker = L.circleMarker(latLng, {
             radius: 8,
@@ -79,7 +105,8 @@ function updatePosition() {
         } else {
           userMarker.setLatLng(latLng);
         }
-        map.setView(latLng, 17);  // Centrer la carte sur la position
+        map.setView(latLng, 17);
+        checkPosition(latLng);
       },
       (err) => {
         console.warn("Erreur GPS :", err.message);
@@ -87,19 +114,52 @@ function updatePosition() {
       },
       {
         enableHighAccuracy: true,
-        timeout: 5000,  // Délai d'attente pour obtenir la position
-        maximumAge: 0  // Pas de mise en cache de la position
+        timeout: 5000,
+        maximumAge: 0
       }
     );
   } else {
     alert("La géolocalisation n'est pas supportée par ce navigateur.");
   }
+
+  // Vérifier la position toutes les 2 secondes
+  setInterval(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        const latLng = [position.coords.latitude, position.coords.longitude];
+        checkPosition(latLng);
+      });
+    }
+  }, 2000);
 }
 
-// Initialiser la mise à jour de la position et répéter toutes les 10 secondes
-updatePosition();
-setInterval(updatePosition, 10000);
-</script>
+// Vérifier si l'utilisateur est à l'intérieur ou en dehors du cercle
+function checkPosition(latLng) {
+  if (!circle) {
+    circle = L.circle([48.12061231600659, -1.2115913174157131], {
+      color: 'blue',
+      fillColor: 'blue',
+      fillOpacity: 0.2,
+      radius: radius
+    }).addTo(map);
+  }
 
+  const distance = map.distance(latLng, circle.getLatLng());
+  if (distance > radius) {
+    if (!outsideCircle) {
+      outsideCircle = true;
+      document.body.style.backgroundColor = 'red'; // Clignotement ou fond rouge
+      setTimeout(() => {
+        document.body.style.backgroundColor = ''; // Réinitialise après un délai
+      }, 2000);
+    }
+  } else {
+    outsideCircle = false;
+  }
+}
+
+// Initialisation
+startTracking();
+</script>
 </body>
 </html>
